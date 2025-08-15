@@ -10,7 +10,11 @@ A beginner-friendly Python voice assistant that can answer questions, play music
 - ⏰ **Time & Date**: Tells current time and date
 - 💬 **Simple Chatbot**: Answers basic questions
 - 🌤️ **Weather Info**: Demo weather feature (extensible)
-- 🧠 **LLM Answers (Optional)**: Route open-ended questions to Gemma via Ollama
+- 🧠 **LLM Answers**: Route open-ended questions to Gemini 2.0 Flash API
+- 🧮 **Math Calculator**: Handles basic arithmetic operations
+- 😄 **Jokes & Fun Facts**: Entertainment features
+- 🎲 **Games**: Coin flip and dice roll
+- ⏱️ **Timer**: Set countdown timers
 
 ## Quick Start
 
@@ -67,6 +71,14 @@ Once running, you can say:
 - **"Stop music"** - Stop currently playing music
 - **"Hello"** - Basic conversation
 - **"How are you?"** - Chatbot response
+- **"Tell me a joke"** - Get a random joke
+- **"Fun fact"** - Learn something interesting
+- **"Flip coin"** - Virtual coin flip
+- **"Roll dice"** - Roll a virtual dice
+- **"Set timer for 30 seconds"** - Set a countdown timer
+- **"What is 15 plus 27?"** - Math calculations
+- **"Calculate 8 times 6"** - More math operations
+- **"What is machine learning?"** - AI-powered answers
 - **"Goodbye"** - Exit the program
 
 ## Installation Troubleshooting
