@@ -25,12 +25,8 @@ Setup tip:
 """
 import datetime  # Provides date and time utilities
 import math  # Provides mathematical functions and constants
-import os  # Operating system interfaces (imported but not used directly)
 import random  # Used to randomly choose from response lists
 import re  # Regular expression operations for parsing text
-import threading  # Thread utilities (imported but not used directly)
-import time  # Time-related utilities (imported but not used directly)
-import json  # JSON utilities (imported but not used directly)
 import pyttsx3  # Text-to-speech engine for local voice output
 import requests  # HTTP client for calling the Gemini API
 import speech_recognition as sr  # Speech recognition for listening and transcription
