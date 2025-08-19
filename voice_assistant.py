@@ -6,10 +6,6 @@ import re
 import threading
 import time
 import json
-import webbrowser
-import platform
-import psutil
-
 import pyttsx3
 import requests
 import speech_recognition as sr
@@ -29,11 +25,9 @@ class VoiceAssistant:
         self.assistant_name = "DeepSphere"
         self.memory = []
         self.max_memory = 50
-
         self._configure_voice()
 
     def _setup_apis(self):
-        # Use the provided Gemini API key
         self.gemini_api_key = "AIzaSyBVbzio3hQ6-Vr69n1wO_KmKAavAyB7X1M"
         self.gemini_api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
         
@@ -56,18 +50,14 @@ class VoiceAssistant:
     def _configure_voice(self):
         voices = self.tts_engine.getProperty('voices')
         print(f"Found {len(voices)} voices")
-
-        # Try to find a good quality voice
         priority_voices = ['zira', 'samantha', 'hazel', 'david', 'mark', 'alex', 'victoria']
-        
         for voice in voices:
             name = (voice.name or "").lower()
             if any(priority in name for priority in priority_voices):
                 self.tts_engine.setProperty('voice', voice.id)
                 print(f"Using: {voice.name}")
                 break
-
-        self.tts_engine.setProperty('rate', 150)
+        self.tts_engine.setProperty('rate', 200)
         self.tts_engine.setProperty('volume', 1.0)
 
     def _test_gemini_connection(self):
@@ -87,7 +77,6 @@ class VoiceAssistant:
         phrase_limit = 60
         threshold = 200
         pause_threshold = 1.5
-
         try:
             with self.microphone as source:
                 print("Listening for input...")
@@ -125,7 +114,6 @@ class VoiceAssistant:
         """Send any question to Gemini AI"""
         try:
             full_prompt = f"You are a helpful AI assistant. {context}\nQuestion: {prompt}\nPlease provide a clear, helpful, and natural response:"
-            
             payload = {
                 "contents": [{"parts": [{"text": full_prompt}]}],
                 "generationConfig": {
@@ -135,7 +123,6 @@ class VoiceAssistant:
                     "topK": 40
                 }
             }
-
             headers = {"Content-Type": "application/json"}
             response = requests.post(
                 f"{self.gemini_api_url}?key={self.gemini_api_key}", 
@@ -143,7 +130,6 @@ class VoiceAssistant:
                 headers=headers,
                 timeout=30
             )
-            
             if response.ok:
                 data = response.json()
                 if "candidates" in data and data["candidates"]:
@@ -287,43 +273,6 @@ class VoiceAssistant:
 
 
 
-    def handle_system_commands(self, command):
-        """Handle system-related commands"""
-        if "volume" in command:
-            if "up" in command or "increase" in command:
-                # This would require additional libraries on Windows
-                return "Volume control requires additional setup. You can use your system volume controls."
-            elif "down" in command or "decrease" in command:
-                return "Volume control requires additional setup. You can use your system volume controls."
-            else:
-                return "You can say 'volume up' or 'volume down' to control system volume."
-
-        if "system info" in command or "computer info" in command:
-            system_info = f"Operating System: {platform.system()} {platform.release()}"
-            system_info += f"\nMachine: {platform.machine()}"
-            system_info += f"\nProcessor: {platform.processor()}"
-            
-            # Memory info
-            memory = psutil.virtual_memory()
-            system_info += f"\nMemory: {memory.total // (1024**3)} GB total, {memory.percent}% used"
-            
-            # Disk info
-            disk = psutil.disk_usage('/')
-            system_info += f"\nDisk: {disk.total // (1024**3)} GB total, {disk.free // (1024**3)} GB free"
-            
-            return system_info
-
-        if "open browser" in command or "open web browser" in command:
-            try:
-                webbrowser.open("https://www.google.com")
-                return "Opening web browser"
-            except:
-                return "Could not open web browser"
-
-        return None
-
-
-
     def process_command(self, command):
         """Main command processor - redirects all questions to Gemini"""
         if not command:
@@ -366,15 +315,6 @@ class VoiceAssistant:
                 return True
 
 
-
-
-
-        # System commands
-        if any(word in command for word in ["volume", "system", "computer", "browser"]):
-            result = self.handle_system_commands(command)
-            if result:
-                self.speak(result)
-            return True
 
 
 
@@ -453,60 +393,6 @@ class VoiceAssistant:
         return "general"
 
 
-
-
-
-    def _fetch_weather(self, city):
-        """Fetch weather data from OpenWeather API"""
-        try:
-            params = {"q": city, "appid": self.weather_api_key, "units": "metric"}
-            response = requests.get(self.weather_api_url, params=params, timeout=10)
-            
-            if response.ok:
-                data = response.json()
-                cod = str(data.get("cod", "200"))
-                if cod.startswith("2"):
-                    return data
-            return None
-        except Exception:
-            return None
-
-    def _format_weather(self, data):
-        """Format weather data into readable text"""
-        try:
-            name = data.get("name")
-            main = data.get("main", {})
-            wind = data.get("wind", {})
-            weather_list = data.get("weather", [])
-            desc = weather_list[0].get("description") if weather_list else None
-            temp = main.get("temp")
-            feels = main.get("feels_like")
-            humidity = main.get("humidity")
-            wind_speed = wind.get("speed")
-            
-            parts = []
-            if name:
-                parts.append(f"In {name}")
-            if temp is not None:
-                parts.append(f"it's {round(float(temp))}°C")
-            if desc:
-                parts.append(f"with {desc}")
-            if feels is not None:
-                parts.append(f"(feels like {round(float(feels))}°C)")
-            if humidity is not None:
-                parts.append(f"humidity {int(humidity)}%")
-            if wind_speed is not None:
-                parts.append(f"wind {round(float(wind_speed))} m/s")
-            
-            if not parts:
-                return "I couldn't parse the weather details."
-            
-            response = ", ".join(parts[:3])
-            if len(parts) > 3:
-                response += ", " + ", ".join(parts[3:])
-            return response
-        except Exception:
-            return "I couldn't parse the weather details."
 
 
 
