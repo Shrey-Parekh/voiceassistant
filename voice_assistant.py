@@ -7,11 +7,10 @@ What it does:
 - Answers general questions by calling the Gemini AI HTTP API
 - Speaks answers out loud using the computer's text-to-speech voice
 - Handles simple math (e.g., "5 plus 7", "square root of 9")
-- Keeps a short memory of recent Q&A for summary stats
 
 How it works (high level):
 1) `listen()` records audio and uses Google Speech Recognition to get text
-2) `process_command()` decides what to do (time, date, math, memory, or ask Gemini)
+2) `process_command()` decides what to do (time, date, math, or ask Gemini)
 3) `ask_gemini()` sends the text to the Gemini API and returns the answer
 4) `speak()` uses `pyttsx3` to read the answer aloud
 
@@ -37,7 +36,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
     Responsibilities:
     - Convert microphone speech to text
-    - Handle quick commands (time, date, math, memory)
+    - Handle quick commands (time, date, math)
     - Ask Gemini AI for answers to general questions
     - Speak responses aloud via text-to-speech
     """
@@ -51,13 +50,13 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         3) Load basic canned responses
         4) Greet the user and test connectivity to Gemini
         """
-        self._setup_core_components()  # Initialize recognizer, mic, TTS, memory, and voice
+        self._setup_core_components()  # Initialize recognizer, mic, TTS, and voice
         self._setup_apis()  # Configure API keys and endpoints
         self._setup_responses()  # Prepare basic canned responses
         self._initialize_assistant()  # Greet user and test external services
 
     def _setup_core_components(self):  # Prepare core I/O and state
-        """Initialize microphone, recognizer, TTS, name, memory, and voice.
+        """Initialize microphone, recognizer, TTS, name, and voice.
 
         No arguments. Sets attributes on `self` used by other methods.
         """
@@ -65,8 +64,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         self.microphone = sr.Microphone()  # Select default system microphone
         self.tts_engine = pyttsx3.init()  # Initialize text-to-speech engine
         self.assistant_name = "DeepSphere"  # Set assistant's display name
-        self.memory = []  # Conversation memory buffer
-        self.max_memory = 50  # Maximum number of interactions to retain
         self._configure_voice()  # Configure TTS voice, rate, and volume
 
     def _setup_apis(self):  # Configure external API credentials
@@ -76,8 +73,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         """
         self.gemini_api_key = "AIzaSyBVbzio3hQ6-Vr69n1wO_KmKAavAyB7X1M"  # Google Gemini API key (should be secured)
         self.gemini_api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Gemini model endpoint
-        
-
 
     def _setup_responses(self):  # Define simple, hardcoded responses
         """Build a dictionary of simple triggers to friendly responses."""
@@ -359,8 +354,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
 
 
-
-
     def process_command(self, command):  # Route a user's command to the right handler
         """Decide what to do with recognized text and act on it.
 
@@ -368,8 +361,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         1) Exit if the user said a stop word
         2) Tell time/date if asked
         3) Detect and solve math
-        4) Show memory stats or clear memory on request
-        5) For general questions, ask Gemini; otherwise try a basic friendly reply
+        4) For general questions, ask Gemini; otherwise try a basic friendly reply
 
         Returns:
             False only when the user asks to quit; True otherwise.
@@ -417,17 +409,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
 
 
-        # Memory commands
-        if "memory" in command:  # Ask about memory
-            result = self._get_memory_stats()  # Compute memory stats
-            self.speak(result)  # Speak stats
-            return True  # Continue loop
 
-        # Clear memory
-        if "clear memory" in command or "forget" in command:  # Clear memory intent
-            self.memory.clear()  # Empty memory buffer
-            self.speak("I've cleared my memory.")  # Confirm action
-            return True  # Continue loop
 
         # All other questions go to Gemini AI
         if any(word in command for word in ["what", "who", "when", "where", "why", "how", "explain",  # Broad Q/A triggers
@@ -438,7 +420,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             answer = self.ask_gemini(command)  # Query Gemini for an answer
             
             if answer:  # If model returned an answer
-                self._remember(command, answer)  # Save to memory
                 self.speak(answer)  # Speak the answer
             else:  # If no answer returned
                 self.speak("I'm having trouble getting a response right now. Please try again.")  # Inform user
@@ -454,62 +435,11 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         answer = self.ask_gemini(command)  # Fallback to model
         
         if answer:  # If we got an answer
-            self._remember(command, answer)  # Save it
             self.speak(answer)  # Speak it
         else:  # No answer
             self.speak("I couldn't get a response. Could you try rephrasing your question?")  # Ask for rephrase
         
         return True  # Continue loop
-
-    def _remember(self, question, answer):  # Store interaction details in memory
-        """Save a question/answer pair with topic and timestamp in memory."""
-        interaction = {  # Build memory record
-            "question": question,  # Original user question
-            "answer": answer,  # Assistant's answer
-            "topic": self._get_topic(question),  # Categorized topic
-            "timestamp": datetime.datetime.now()  # Time of interaction
-        }
-        self.memory.append(interaction)  # Add to memory buffer
-        if len(self.memory) > self.max_memory:  # Enforce max memory size
-            self.memory.pop(0)  # Remove oldest entry
-        print(f"Remembered: {interaction['topic']}")  # Log topic stored
-
-    def _get_topic(self, question):  # Heuristically assign a topic to a question
-        """Return a rough topic label by matching keywords in the question."""
-        question_lower = question.lower()  # Normalize for keyword matching
-        topics = {  # Topic dictionary mapping to keyword lists
-            "technology": ["computer", "software", "ai", "programming", "code", "app", "website"],
-            "science": ["physics", "chemistry", "biology", "math", "experiment", "research"],
-            "health": ["medical", "fitness", "nutrition", "exercise", "health", "diet"],
-            "finance": ["money", "investment", "budget", "savings", "stock", "bank"],
-            "entertainment": ["movie", "music", "game", "book", "show", "joke", "fun"],
-            "education": ["learn", "study", "school", "university", "course", "teach"]
-        }
-        
-        for topic, keywords in topics.items():  # Iterate over topic groups
-            if any(keyword in question_lower for keyword in keywords):  # Match any keyword
-                return topic  # Return first matching topic
-        return "general"  # Default topic when no keywords match
-
-
-
-
-
-    def _get_memory_stats(self):  # Summarize memory buffer by topic
-        """Summarize how many conversations are remembered and by which topics."""
-        if not self.memory:  # No memory yet
-            return "I haven't had any conversations yet to remember."  # Inform user
-
-        topic_counts = {}  # Accumulator for topic frequencies
-        for m in self.memory:  # Iterate over memory entries
-            topic = m["topic"]  # Extract topic
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1  # Increment count
-
-        response = f"I remember {len(self.memory)} conversations. "  # Start summary
-        if topic_counts:  # If we have topic data
-            topics = [f"{topic} ({count})" for topic, count in topic_counts.items()]  # Format topic counts
-            response += "Topics: " + ", ".join(topics)  # Append topics summary
-        return response  # Return final summary
 
     def _get_basic_response(self, user_input):  # Try to match simple, friendly replies
         """Return a friendly canned response when the input matches a simple trigger."""
