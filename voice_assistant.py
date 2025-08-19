@@ -1,3 +1,28 @@
+"""
+DeepSphere Voice Assistant
+-------------------------
+
+What it does:
+- Listens to your voice through the microphone and turns speech into text
+- Answers general questions by calling the Gemini AI HTTP API
+- Speaks answers out loud using the computer's text-to-speech voice
+- Handles simple math (e.g., "5 plus 7", "square root of 9")
+- Keeps a short memory of recent Q&A for summary stats
+
+How it works (high level):
+1) `listen()` records audio and uses Google Speech Recognition to get text
+2) `process_command()` decides what to do (time, date, math, memory, or ask Gemini)
+3) `ask_gemini()` sends the text to the Gemini API and returns the answer
+4) `speak()` uses `pyttsx3` to read the answer aloud
+
+Requirements:
+- A working microphone
+- Internet access for the Gemini API
+- Python packages: pyttsx3, speech_recognition, requests
+
+Setup tip:
+- For security, store your Gemini API key in an environment variable and load it instead of hardcoding it.
+"""
 import datetime  # Provides date and time utilities
 import math  # Provides mathematical functions and constants
 import os  # Operating system interfaces (imported but not used directly)
@@ -12,13 +37,34 @@ import speech_recognition as sr  # Speech recognition for listening and transcri
 
 
 class VoiceAssistant:  # Encapsulates all voice assistant behavior
+    """A simple voice assistant that listens, understands, and speaks back.
+
+    Responsibilities:
+    - Convert microphone speech to text
+    - Handle quick commands (time, date, math, memory)
+    - Ask Gemini AI for answers to general questions
+    - Speak responses aloud via text-to-speech
+    """
+
     def __init__(self):  # Constructor initializes subsystems
+        """Create and initialize the assistant.
+
+        Steps:
+        1) Prepare core I/O components (microphone, recognizer, TTS)
+        2) Configure API credentials/endpoints
+        3) Load basic canned responses
+        4) Greet the user and test connectivity to Gemini
+        """
         self._setup_core_components()  # Initialize recognizer, mic, TTS, memory, and voice
         self._setup_apis()  # Configure API keys and endpoints
         self._setup_responses()  # Prepare basic canned responses
         self._initialize_assistant()  # Greet user and test external services
 
     def _setup_core_components(self):  # Prepare core I/O and state
+        """Initialize microphone, recognizer, TTS, name, memory, and voice.
+
+        No arguments. Sets attributes on `self` used by other methods.
+        """
         self.recognizer = sr.Recognizer()  # Create a speech recognizer instance
         self.microphone = sr.Microphone()  # Select default system microphone
         self.tts_engine = pyttsx3.init()  # Initialize text-to-speech engine
@@ -28,12 +74,17 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         self._configure_voice()  # Configure TTS voice, rate, and volume
 
     def _setup_apis(self):  # Configure external API credentials
+        """Configure API key and endpoint for Gemini.
+
+        Tip: Prefer loading `self.gemini_api_key` from an environment variable.
+        """
         self.gemini_api_key = "AIzaSyBVbzio3hQ6-Vr69n1wO_KmKAavAyB7X1M"  # Google Gemini API key (should be secured)
         self.gemini_api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"  # Gemini model endpoint
         
 
 
     def _setup_responses(self):  # Define simple, hardcoded responses
+        """Build a dictionary of simple triggers to friendly responses."""
         self.responses = {  # Mapping of trigger phrases to response options
             "hello": ["Hello! How can I help you today?", "Hi there!", "Hello! Nice to meet you!"],  # Greetings
             "how are you": ["I'm doing great, thank you for asking!", "I'm fine, how about you?"],  # Status replies
@@ -43,11 +94,16 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         }
 
     def _initialize_assistant(self):  # Announce readiness and verify API connectivity
+        """Greet the user and run a quick Gemini connectivity test."""
         print("DeepSphere initialized successfully!")  # Log initialization success
         self.speak(f"Hello! I'm {self.assistant_name}. How can I help you today?")  # Speak greeting
         self._test_gemini_connection()  # Quick API connectivity check
 
     def _configure_voice(self):  # Pick a pleasant voice and tune speaking parameters
+        """Choose a preferred TTS voice and tune rate/volume.
+
+        The code tries to find a familiar voice by name, then sets speed and volume.
+        """
         voices = self.tts_engine.getProperty('voices')  # Retrieve available TTS voices
         print(f"Found {len(voices)} voices")  # Log how many voices are available
         priority_voices = ['zira', 'samantha', 'hazel', 'david', 'mark', 'alex', 'victoria']  # Preferred voice names
@@ -61,6 +117,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         self.tts_engine.setProperty('volume', 1.0)  # Set maximum volume
 
     def _test_gemini_connection(self):  # Sanity-check the Gemini API
+        """Send a tiny test prompt to verify the API is reachable and responding."""
         print("Testing Gemini API connection...")  # Indicate test start
         if self.ask_gemini("Say hello in one sentence"):  # Make a simple test request
             print("Gemini API connected successfully!")  # Success message
@@ -68,11 +125,26 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             print("Gemini API connection failed - check your API key")  # Failure message
 
     def speak(self, text):  # Convert text to audio and print to console
+        """Speak text out loud and also print it to the console.
+
+        Args:
+            text: The message to speak.
+        """
         print(f"Assistant: {text}")  # Console log of the spoken text
         self.tts_engine.say(text)  # Queue text for speech
         self.tts_engine.runAndWait()  # Block until speech finishes
 
     def listen(self):  # Capture audio from microphone and transcribe to text
+        """Listen from the microphone and return recognized lowercase text.
+
+        Returns:
+            Recognized text as a string, or None if nothing was recognized.
+
+        Notes:
+            - `timeout` is how long we wait for speech to start
+            - `phrase_limit` caps how long we record once speech begins
+            - `pause_threshold` controls how much silence ends the phrase
+        """
         timeout = 30  # Max seconds to wait for speech to start
         phrase_limit = 60  # Max duration of a phrase in seconds
         threshold = 200  # Initial energy threshold for detecting speech
@@ -111,7 +183,15 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             return None  # Return no result
 
     def ask_gemini(self, prompt, context=""):  # Send a prompt to Gemini and return the text answer
-        """Send any question to Gemini AI"""  # Method docstring
+        """Call the Gemini API with a question and return the answer text.
+
+        Args:
+            prompt: The user's question or instruction.
+            context: Optional extra instructions or background to prepend.
+
+        Returns:
+            A string answer from Gemini, or None if the call fails or has no text.
+        """
         try:  # Wrap network call with error handling
             full_prompt = f"You are a helpful AI assistant. {context}\nQuestion: {prompt}\nPlease provide a clear, helpful, and natural response:"  # Construct instruction-rich prompt
             payload = {  # Request payload per Gemini API spec
@@ -150,7 +230,19 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             return None  # Return no answer
 
     def handle_math(self, command):  # Parse and compute math-related requests
-        """Handle mathematical calculations"""  # Method docstring
+        """Parse simple math in natural language or symbols and compute a result.
+
+        Supports:
+        - Square root, cube root, factorial, exponentiation
+        - Addition, subtraction, multiplication, division, modulo
+        - Direct expressions like "5 + 3 * 2" (basic sanitization applied)
+
+        Args:
+            command: The raw text of the user's math request.
+
+        Returns:
+            A friendly result string, or guidance if the intent is unclear.
+        """
         try:  # Guard against parsing or math errors
             expr = command.lower().strip()  # Normalize input text
             print(f"Processing math command: {expr}")  # Log the expression being handled
@@ -274,7 +366,18 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
 
     def process_command(self, command):  # Route a user's command to the right handler
-        """Main command processor - redirects all questions to Gemini"""  # Method docstring
+        """Decide what to do with recognized text and act on it.
+
+        Flow:
+        1) Exit if the user said a stop word
+        2) Tell time/date if asked
+        3) Detect and solve math
+        4) Show memory stats or clear memory on request
+        5) For general questions, ask Gemini; otherwise try a basic friendly reply
+
+        Returns:
+            False only when the user asks to quit; True otherwise.
+        """
         if not command:  # Ignore empty inputs
             return True  # Continue loop
 
@@ -363,7 +466,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         return True  # Continue loop
 
     def _remember(self, question, answer):  # Store interaction details in memory
-        """Remember interactions for context"""  # Method docstring
+        """Save a question/answer pair with topic and timestamp in memory."""
         interaction = {  # Build memory record
             "question": question,  # Original user question
             "answer": answer,  # Assistant's answer
@@ -376,7 +479,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         print(f"Remembered: {interaction['topic']}")  # Log topic stored
 
     def _get_topic(self, question):  # Heuristically assign a topic to a question
-        """Categorize questions by topic"""  # Method docstring
+        """Return a rough topic label by matching keywords in the question."""
         question_lower = question.lower()  # Normalize for keyword matching
         topics = {  # Topic dictionary mapping to keyword lists
             "technology": ["computer", "software", "ai", "programming", "code", "app", "website"],
@@ -397,7 +500,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
 
     def _get_memory_stats(self):  # Summarize memory buffer by topic
-        """Get statistics about remembered conversations"""  # Method docstring
+        """Summarize how many conversations are remembered and by which topics."""
         if not self.memory:  # No memory yet
             return "I haven't had any conversations yet to remember."  # Inform user
 
@@ -413,7 +516,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         return response  # Return final summary
 
     def _get_basic_response(self, user_input):  # Try to match simple, friendly replies
-        """Get basic responses for simple commands"""  # Method docstring
+        """Return a friendly canned response when the input matches a simple trigger."""
         for key, responses in self.responses.items():  # Iterate trigger-response pairs
             if key in user_input:  # If the trigger appears in input
                 return random.choice(responses)  # Return a random canned response
@@ -426,7 +529,10 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         ])
 
     def run(self):  # Continuous loop to listen and respond
-        """Main run loop"""  # Method docstring
+        """Main loop: listen, process, and speak until the user exits.
+
+        Press Ctrl+C in the terminal to interrupt and exit.
+        """
         print("\n" + "="*60)  # Visual separator
         print("DEEPSPHERE VOICE ASSISTANT STARTED")  # Startup banner
         print("Connected to Gemini AI")  # Indicate API connectivity
@@ -453,6 +559,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
                 print(f"Error: {e}")  # Log error details
                 self.speak("Sorry, something went wrong. Let's try again.")  # Inform user
 def main():  # Entry point to start the voice assistant
+    """Create the assistant and start the interactive session."""
     try:  # Guard assistant startup
         assistant = VoiceAssistant()  # Instantiate the assistant
         assistant.run()  # Begin the main interaction loop
