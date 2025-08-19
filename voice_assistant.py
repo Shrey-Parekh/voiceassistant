@@ -352,8 +352,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             print(f"Math calculation error: {e}")  # Log error
             return f"Sorry, I couldn't calculate that. Error: {str(e)}"  # Inform user
 
-
-
     def process_command(self, command):  # Route a user's command to the right handler
         """Decide what to do with recognized text and act on it.
 
@@ -375,8 +373,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         if any(word in command for word in ["quit", "exit", "goodbye", "bye", "stop"]):  # Check for exit intent
             self.speak("Goodbye! Have a great day!")  # Say goodbye
             return False  # Signal to stop main loop
-
-
 
         # Time and date
         if "time" in command and ("what" in command or "tell" in command):  # Ask current time
@@ -404,12 +400,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             if result:  # If a result was produced
                 self.speak(result)  # Speak the result
                 return True  # Continue loop
-
-
-
-
-
-
 
         # All other questions go to Gemini AI
         if any(word in command for word in ["what", "who", "when", "where", "why", "how", "explain",  # Broad Q/A triggers
