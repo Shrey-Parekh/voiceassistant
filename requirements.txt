@@ -1,7 +1,9 @@
-
+# Core dependencies for DeepSphere Voice Assistant
 SpeechRecognition>=3.10.0
 pyttsx3>=2.90
 PyAudio>=0.2.11
 requests>=2.31.0
+
+# Optional dependency for system information (used in test_setup.py)
 psutil>=5.9.0
 

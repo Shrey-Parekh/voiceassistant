@@ -1,39 +1,37 @@
-# AI Voice Assistant with Gemini AI Integration
+# DeepSphere Voice Assistant
 
-A powerful voice assistant that connects to Google's Gemini AI to answer any questions, perform calculations, and provide various utilities through natural voice commands.
+A Python-based voice assistant that uses Google's Gemini AI to answer questions, perform mathematical calculations, and provide basic utility functions through natural voice commands.
 
 ## 🌟 Features
 
 ### 🤖 AI Integration
 - **Gemini AI Powered**: All questions are automatically sent to Gemini AI for intelligent responses
 - **Natural Language Processing**: Understands complex questions and provides detailed answers
-- **Context Awareness**: Remembers previous conversations for better context
+- **Pre-configured API**: Already set up with a working Gemini API key
 
 ### 🎤 Voice Processing
-- **High-Quality Speech Recognition**: Handles long speech prompts (up to 2-3 minutes)
-- **Natural Text-to-Speech**: Uses high-quality TTS for human-like responses
+- **High-Quality Speech Recognition**: Uses Google Speech Recognition API for accurate transcription
+- **Natural Text-to-Speech**: Uses pyttsx3 for local text-to-speech with automatic voice selection
 - **Noise Filtering**: Real-time microphone capture with ambient noise adjustment
-- **Continuous Listening Mode**: Switch between normal and extended listening modes
+- **Continuous Listening**: 30-second timeout with 60-second phrase limit for longer questions
 
 ### 🧮 Mathematical Capabilities
-- **Basic Operations**: Addition, subtraction, multiplication, division
-- **Advanced Math**: Power (x^y), square root, cube root, nth root
-- **Scientific Functions**: Trigonometry (sine, cosine, tangent), logarithms
+- **Basic Operations**: Addition, subtraction, multiplication, division, modulo
+- **Advanced Math**: Power (x^y), square root, cube root, factorial
 - **Natural Language Math**: "What's 5 plus 3" or "calculate the square root of 16"
+- **Direct Expressions**: Handles simple expressions like "5 + 3 * 2"
 
 ### ⏰ Utility Functions
-- **Timer/Stopwatch**: Set timers with voice commands ("Set timer for 10 minutes")
-- **Weather Information**: Current weather and forecasts for any city
-- **Time/Date**: Current time, date, and timezone information
-- **System Commands**: Volume control, system information, open browser
-- **News Headlines**: Get current news and headlines
+- **Time/Date**: Current time and date information
+- **Basic Responses**: Greetings, farewells, and simple interactions
+- **System Integration**: Works with any microphone and speaker setup
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.7 or higher
 - Microphone access
-- Internet connection for Gemini AI and weather services
+- Internet connection for Gemini AI and speech recognition
 
 ### Installation
 
@@ -43,19 +41,20 @@ A powerful voice assistant that connects to Google's Gemini AI to answer any que
    pip install -r requirements.txt
    ```
 
-3. **Set up API keys** (optional for enhanced features):
+3. **Test your setup** (recommended):
    ```bash
-   # For weather information
-   set OPENWEATHER_API_KEY=your_openweather_api_key
-   
-   # For news headlines
-   set NEWS_API_KEY=your_news_api_key
+   python test_setup.py
    ```
 
 4. **Run the assistant**:
    ```bash
    python voice_assistant.py
    ```
+
+### Alternative Launch Methods
+
+**Windows**: Double-click `run_assistant.bat`
+**Mac/Linux**: Run `./run_assistant.sh` in terminal
 
 ## 🎯 Usage Examples
 
@@ -72,42 +71,32 @@ A powerful voice assistant that connects to Google's Gemini AI to answer any que
 - "What is the square root of 144?"
 - "What's 5 to the power of 3?"
 - "Calculate the factorial of 6"
+- "What's 10 divided by 3?"
+- "What's the remainder when 17 is divided by 5?"
 
-### Weather Information
-- "What's the weather in London?"
-- "Temperature in New York"
-- "Weather forecast for Tokyo"
-
-### Timer and Stopwatch
-- "Set timer for 5 minutes"
-- "Start stopwatch"
-- "Stop stopwatch"
-
-### System Commands
-- "What's the system information?"
-- "Open web browser"
+### Utility Commands
 - "What time is it?"
 - "What day is today?"
+- "Hello" or "Hi"
+- "What is your name?"
+- "How are you?"
 
 ### Voice Commands
-- "Continuous listening" - Switch to extended listening mode
-- "Normal listening" - Switch to standard listening mode
-- "Quit" or "Goodbye" - Exit the assistant
-- "Clear memory" - Clear conversation history
+- "Quit", "Exit", "Goodbye", or "Bye" - Exit the assistant
 
 ## 🔧 Configuration
 
 ### Voice Settings
-The assistant automatically detects and configures the best available voice on your system. You can modify voice settings in the `_configure_voice()` method.
+The assistant automatically detects and configures the best available voice on your system. It prioritizes voices like Zira, Samantha, Hazel, David, Mark, Alex, and Victoria.
 
 ### API Configuration
 - **Gemini AI**: Already configured with the provided API key
-- **Weather API**: Set `OPENWEATHER_API_KEY` environment variable
-- **News API**: Set `NEWS_API_KEY` environment variable
+- **Speech Recognition**: Uses Google Speech Recognition API (requires internet)
 
-### Listening Modes
-- **Normal Mode**: 15-second timeout, 30-second phrase limit
-- **Continuous Mode**: 30-second timeout, 60-second phrase limit
+### Listening Settings
+- **Timeout**: 30 seconds to wait for speech to start
+- **Phrase Limit**: 60 seconds maximum recording duration
+- **Pause Threshold**: 1.5 seconds of silence ends recording
 
 ## 🛠️ Technical Details
 
@@ -118,15 +107,15 @@ The assistant automatically detects and configures the best available voice on y
 - **Audio Processing**: PyAudio for microphone input
 
 ### Architecture
-- **Modular Design**: Separate handlers for different command types
+- **Modular Design**: Separate methods for different command types
 - **Error Handling**: Comprehensive error handling for all operations
-- **Memory Management**: Intelligent conversation memory with topic categorization
-- **Background Processing**: Timers and long-running tasks run in background threads
+- **Voice Configuration**: Automatic voice selection and configuration
+- **Math Processing**: Natural language math parsing and evaluation
 
 ### Performance Features
 - **Dynamic Energy Threshold**: Automatically adjusts to ambient noise
 - **Timeout Management**: Configurable listening timeouts
-- **Memory Optimization**: Limited conversation memory to prevent memory bloat
+- **Voice Optimization**: Automatic voice selection and rate/volume tuning
 
 ## 🐛 Troubleshooting
 
@@ -153,17 +142,17 @@ The assistant automatically detects and configures the best available voice on y
    - Try `pip install --upgrade pip` before installing requirements
 
 ### Performance Tips
-- Use continuous listening mode for longer questions
 - Speak clearly and at a consistent pace
 - Keep the microphone at a consistent distance
 - Minimize background noise
+- The assistant handles longer questions automatically
 
 ## 🔒 Privacy and Security
 
-- **Local Processing**: Speech recognition and TTS run locally
-- **API Communication**: Only sends text queries to Gemini AI
+- **Local Processing**: Text-to-speech runs locally
+- **API Communication**: Only sends text queries to Gemini AI and Google Speech Recognition
 - **No Recording**: No audio is stored or transmitted
-- **Memory**: Conversation history is stored locally and can be cleared
+- **No Memory**: Conversations are not stored between sessions
 
 ## 📝 License
 
@@ -176,10 +165,11 @@ Feel free to submit issues, feature requests, or pull requests to improve the as
 ## 📞 Support
 
 If you encounter any issues or have questions:
-1. Check the troubleshooting section
-2. Review the error messages in the console
-3. Ensure all dependencies are properly installed
-4. Verify your API keys and internet connection
+1. Run `python test_setup.py` to diagnose problems
+2. Check the troubleshooting section
+3. Review the error messages in the console
+4. Ensure all dependencies are properly installed
+5. Verify your internet connection
 
 ---
 
