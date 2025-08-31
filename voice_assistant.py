@@ -187,10 +187,10 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             payload = {  # Request payload per Gemini API spec
                 "contents": [{"parts": [{"text": full_prompt}]}],  # Provide text content
                 "generationConfig": {  # Control generation behavior
-                    "temperature": 0.7,  # Creativity level
+                    "temperature": 0.6,  # Creativity level
                     "maxOutputTokens": 500,  # Max response length
-                    "topP": 0.8,  # Nucleus sampling parameter
-                    "topK": 40  # Top-K sampling parameter
+                    "topP": 0.7,  # Nucleus sampling parameter
+                    "topK": 30  # Top-K sampling parameter
                 }
             }
             headers = {"Content-Type": "application/json"}  # JSON request header
