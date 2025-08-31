@@ -436,6 +436,7 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             return True  # Continue loop
 
 
+
     def _get_basic_response(self, user_input):  # Try to match simple, friendly replies
         """Return a friendly canned response when the input matches a simple trigger."""
         for key, responses in self.responses.items():  # Iterate trigger-response pairs
