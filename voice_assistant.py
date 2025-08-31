@@ -90,21 +90,21 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
         self.speak(f"Hello! I'm {self.assistant_name}. How can I help you today?")  # Speak greeting
         self._test_gemini_connection()  # Quick API connectivity check
 
-    def _configure_voice(self):  # Pick a pleasant voice and tune speaking parameters
-        """Choose a preferred TTS voice and tune rate/volume.
+    def _configure_voice(self):  # Configure TTS voice settings
+        """Set up the default TTS voice with custom rate and volume.
 
-        The code tries to find a familiar voice by name, then sets speed and volume.
+        Uses the system default voice and configures speech parameters.
         """
+        # Get available voices for logging purposes
         voices = self.tts_engine.getProperty('voices')  # Retrieve available TTS voices
-        print(f"Found {len(voices)} voices")  # Log how many voices are available
-        priority_voices = ['zira', 'samantha', 'hazel', 'david', 'mark', 'alex', 'victoria']  # Preferred voice names
-        for voice in voices:  # Iterate over available voices
-            name = (voice.name or "").lower()  # Normalize voice name to lowercase
-            if any(priority in name for priority in priority_voices):  # Select first preferred voice
-                self.tts_engine.setProperty('voice', voice.id)  # Set TTS to chosen voice
-                print(f"Using: {voice.name}")  # Log chosen voice
-                break  # Stop searching after finding a match
-        self.tts_engine.setProperty('rate', 200)  # Set speech rate (words per minute)
+        print(f"Found {len(voices)} voices available")  # Log how many voices are available
+        
+        # Use the default voice (no preference selection)
+        if voices:  # If voices are available
+            print(f"Using default voice: {voices[0].name}")  # Log which voice is being used
+        
+        # Set speech rate and volume
+        self.tts_engine.setProperty('rate', 150)  # Set speech rate (words per minute)
         self.tts_engine.setProperty('volume', 1.0)  # Set maximum volume
 
     def _test_gemini_connection(self):  # Sanity-check the Gemini API
@@ -173,18 +173,17 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             self.speak("Sorry, something went wrong while listening. Please try again.")  # Inform user
             return None  # Return no result
 
-    def ask_gemini(self, prompt, context=""):  # Send a prompt to Gemini and return the text answer
+    def ask_gemini(self, prompt):  # Send a prompt to Gemini and return the text answer
         """Call the Gemini API with a question and return the answer text.
 
         Args:
             prompt: The user's question or instruction.
-            context: Optional extra instructions or background to prepend.
 
         Returns:
             A string answer from Gemini, or None if the call fails or has no text.
         """
         try:  # Wrap network call with error handling
-            full_prompt = f"You are a helpful AI assistant. {context}\nQuestion: {prompt}\nPlease provide a clear, helpful, and natural response:"  # Construct instruction-rich prompt
+            full_prompt = f"You are a friendly voice assistant. Answer naturally and conversationally. Keep responses concise but helpful.\n\nUser: {prompt}\nAssistant:"  # Construct natural, conversational prompt
             payload = {  # Request payload per Gemini API spec
                 "contents": [{"parts": [{"text": full_prompt}]}],  # Provide text content
                 "generationConfig": {  # Control generation behavior
@@ -355,11 +354,13 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
     def process_command(self, command):  # Route a user's command to the right handler
         """Decide what to do with recognized text and act on it.
 
-        Flow:
+        IMPROVED FLOW (FIXED ORDER):
         1) Exit if the user said a stop word
-        2) Tell time/date if asked
-        3) Detect and solve math
-        4) For general questions, ask Gemini; otherwise try a basic friendly reply
+        2) Check for basic responses FIRST (greetings, name, etc.) - PRIORITY 1
+        3) Tell time/date if asked - PRIORITY 2
+        4) Detect and solve math (with refined detection) - PRIORITY 3
+        5) For complex questions, ask Gemini AI - PRIORITY 4
+        6) Fallback to Gemini for anything else - PRIORITY 5
 
         Returns:
             False only when the user asks to quit; True otherwise.
@@ -369,12 +370,19 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
 
         command = command.lower().strip()  # Normalize input for matching
 
-        # Exit commands
+        # PRIORITY 1: Exit commands (highest priority - always check first)
         if any(word in command for word in ["quit", "exit", "goodbye", "bye", "stop"]):  # Check for exit intent
             self.speak("Goodbye! Have a great day!")  # Say goodbye
             return False  # Signal to stop main loop
 
-        # Time and date
+        # PRIORITY 2: Basic responses for greetings and simple commands (check BEFORE math/AI)
+        # This fixes the "what is your name" issue by checking basic responses first
+        basic_response = self._get_basic_response(command)  # Try canned responses first
+        if basic_response:  # If a basic response is applicable
+            self.speak(basic_response)  # Speak it
+            return True  # Continue loop
+
+        # PRIORITY 3: Time and date requests
         if "time" in command and ("what" in command or "tell" in command):  # Ask current time
             current_time = datetime.datetime.now().strftime("It's %I:%M %p")  # Format time
             self.speak(current_time)  # Speak time
@@ -385,28 +393,40 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
             self.speak(current_date)  # Speak date
             return True  # Continue loop
 
-        # Math calculations
+        # PRIORITY 4: Math calculations (with REFINED detection to avoid false positives)
+        # REFINED MATH DETECTION: Don't treat "what is" as math, only specific math operations
         math_indicators = ["plus", "minus", "times", "multiply", "divide", "divided by", "add", "subtract", 
                           "addition", "subtraction", "multiplication", "division", "power", "raised to", 
                           "square root", "root", "cube root", "factorial", "modulo", "mod", "remainder", "calculate", 
-                          "solve", "compute", "find", "result", "answer", "what is", "how much is", "equals"]  # Keywords for math
+                          "solve", "compute", "find", "result", "answer", "how much is", "equals"]  # Keywords for math
+        # REMOVED "what is" from math indicators to prevent false math detection
         
-        # Check for math operations or numbers
-        if (any(indicator in command for indicator in math_indicators) or  # Keyword trigger
-            any(char in command for char in "+-*/%**") or  # Operator characters
-            re.search(r'\d+', command)):  # Check if command contains numbers
+        # IMPROVED MATH DETECTION: More specific conditions to avoid catching general questions
+        has_math_operation = any(indicator in command for indicator in math_indicators)  # Check for math keywords
+        has_math_operators = any(char in command for char in "+-*/%**")  # Check for math symbols
+        has_numbers = re.search(r'\d+', command)  # Check if command contains numbers
+        
+        # Only process as math if we have clear math intent (operation + numbers, or operators)
+        if ((has_math_operation and has_numbers) or  # Math keyword + numbers
+            has_math_operators or  # Has math symbols
+            (has_numbers and any(word in command for word in ["calculate", "solve", "compute", "result", "answer"]))):  # Numbers + math intent
             
             result = self.handle_math(command)  # Delegate to math handler
             if result:  # If a result was produced
                 self.speak(result)  # Speak the result
                 return True  # Continue loop
 
-        # All other questions go to Gemini AI
-        if any(word in command for word in ["what", "who", "when", "where", "why", "how", "explain",  # Broad Q/A triggers
-                                          "define", "tell me", "can you", "could you", "would you", 
-                                          "in detail", "more about", "information", "details", 
-                                          "explanation", "describe", "elaborate", "what is", "how to"]):
-            
+        # PRIORITY 5: Complex questions go to Gemini AI (only after basic responses are checked)
+        # IMPROVED QUESTION ROUTING: More specific question detection to avoid overriding basic responses
+        question_words = ["what", "who", "when", "where", "why", "how", "explain",  # Question triggers
+                         "define", "tell me", "can you", "could you", "would you", 
+                         "in detail", "more about", "information", "details", 
+                         "explanation", "describe", "elaborate", "how to"]
+        
+        # Check if this is a complex question that needs AI (not already handled by basic responses)
+        is_complex_question = any(word in command for word in question_words)  # Has question words
+        
+        if is_complex_question:  # If it's a complex question
             answer = self.ask_gemini(command)  # Query Gemini for an answer
             
             if answer:  # If model returned an answer
@@ -415,21 +435,6 @@ class VoiceAssistant:  # Encapsulates all voice assistant behavior
                 self.speak("I'm having trouble getting a response right now. Please try again.")  # Inform user
             return True  # Continue loop
 
-        # Basic responses for greetings and simple commands
-        basic_response = self._get_basic_response(command)  # Try canned responses
-        if basic_response:  # If a basic response is applicable
-            self.speak(basic_response)  # Speak it
-            return True  # Continue loop
-
-        # If nothing else matches, ask Gemini AI
-        answer = self.ask_gemini(command)  # Fallback to model
-        
-        if answer:  # If we got an answer
-            self.speak(answer)  # Speak it
-        else:  # No answer
-            self.speak("I couldn't get a response. Could you try rephrasing your question?")  # Ask for rephrase
-        
-        return True  # Continue loop
 
     def _get_basic_response(self, user_input):  # Try to match simple, friendly replies
         """Return a friendly canned response when the input matches a simple trigger."""
