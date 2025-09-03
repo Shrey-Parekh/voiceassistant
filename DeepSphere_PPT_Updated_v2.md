@@ -1,30 +1,63 @@
-import datetime
-import math
-import random
-import re
-import pyttsx3
-import requests
-import speech_recognition as sr
+---
+title: "DeepSphere: Build a Voice Assistant"
+author: "IET MPSTME"
+format: revealjs
+embed-resources: true
+---
 
+## Introduction
+- This project is a Python-based voice assistant that listens to the microphone, converts speech into text, and interacts with users conversationally.  
+- It can perform quick tasks such as telling the time and date, and it delegates other queries (including math and general knowledge) to the Gemini AI API.  
+- The assistant uses speech recognition for input, Gemini AI for generating intelligent responses, and a text-to-speech engine to reply aloud.  
 
+## Imports
+```python
+import datetime  # Provides date and time utilities
+import random  # Used to randomly choose from response lists
+import pyttsx3  # Text-to-speech engine for local voice output
+import requests  # HTTP client for calling the Gemini API
+import speech_recognition as sr  # Speech recognition for listening and transcription
+```
+
+## Class Definition
+```python
 class VoiceAssistant:
+    # A simple voice assistant that listens, understands, and speaks back.
+    # Responsibilities:
+    # - Convert microphone speech to text
+    # - Handle quick commands (time, date)
+    # - Ask Gemini AI for answers to questions
+    # - Speak responses aloud via text-to-speech
+```
+
+## Initialization
+```python
     def __init__(self):
         self._setup_core_components()
         self._setup_apis()
         self._setup_responses()
         self._initialize_assistant()
+```
 
+## Core Component Setup
+```python
     def _setup_core_components(self):
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
         self.tts_engine = pyttsx3.init()
         self.assistant_name = "DeepSphere"
         self._configure_voice()
+```
 
+## API Setup
+```python
     def _setup_apis(self):
-        self.gemini_api_key = "AIzaSyBVbzio3hQ6-Vr69n1wO_KmKAavAyB7X1M"
+        self.gemini_api_key = "YOUR_API_KEY"
         self.gemini_api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+```
 
+## Responses Setup
+```python
     def _setup_responses(self):
         self.responses = {
             "hello": ["Hello! How can I help you today?", "Hi there!", "Hello! Nice to meet you!"],
@@ -33,34 +66,47 @@ class VoiceAssistant:
             "goodbye": ["Goodbye! Have a great day!", "See you later!", "Bye! Take care!"],
             "thank you": ["You're welcome!", "Happy to help!", "No problem!"],
         }
+```
 
+## Assistant Initialization
+```python
     def _initialize_assistant(self):
         print("DeepSphere initialized successfully!")
         self.speak(f"Hello! I'm {self.assistant_name}. How can I help you today?")
         self._test_gemini_connection()
+```
 
+## Voice Configuration
+```python
     def _configure_voice(self):
         voices = self.tts_engine.getProperty('voices')
         print(f"Found {len(voices)} voices available")
-        
         if voices:
             print(f"Using default voice: {voices[0].name}")
-        
         self.tts_engine.setProperty('rate', 150)
         self.tts_engine.setProperty('volume', 1.0)
+```
 
+## Gemini API Test
+```python
     def _test_gemini_connection(self):
         print("Testing Gemini API connection...")
         if self.ask_gemini("Say hello in one sentence"):
             print("Gemini API connected successfully!")
         else:
             print("Gemini API connection failed - check your API key")
+```
 
+## Speak Method
+```python
     def speak(self, text):
         print(f"Assistant: {text}")
         self.tts_engine.say(text)
         self.tts_engine.runAndWait()
+```
 
+## Listen Method
+```python
     def listen(self):
         timeout = 30
         phrase_limit = 60
@@ -70,18 +116,14 @@ class VoiceAssistant:
             with self.microphone as source:
                 print("Listening for input...")
                 self.recognizer.adjust_for_ambient_noise(source, duration=1.0)
-                
                 self.recognizer.energy_threshold = threshold
                 self.recognizer.dynamic_energy_threshold = True
                 self.recognizer.pause_threshold = pause_threshold
-
                 audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_limit)
-
             print("Processing speech...")
             text = self.recognizer.recognize_google(audio).lower()
             print(f"You said: {text}")
             return text
-
         except sr.WaitTimeoutError:
             print("No speech detected within timeout period")
             return None
@@ -98,10 +140,18 @@ class VoiceAssistant:
             print(f"Error during listening: {e}")
             self.speak("Sorry, something went wrong while listening. Please try again.")
             return None
+```
 
+## Ask Gemini Method
+```python
     def ask_gemini(self, prompt):
         try:
-            full_prompt = f"You are a friendly voice assistant. Answer naturally and conversationally. Keep responses concise but helpful.\n\nUser: {prompt}\nAssistant:"
+            full_prompt = (
+                "You are a friendly voice assistant. "
+                "Answer naturally and conversationally. "
+                "Keep responses concise but helpful.\n\n"
+                f"User: {prompt}\nAssistant:"
+            )
             payload = {
                 "contents": [{"parts": [{"text": full_prompt}]}],
                 "generationConfig": {
@@ -130,117 +180,14 @@ class VoiceAssistant:
                     print(f"Gemini API error: {data}")
             else:
                 print(f"Gemini API request failed: {response.status_code} - {response.text}")
-            
             return None
-
         except Exception as e:
             print(f"Gemini API request failed: {e}")
             return None
+```
 
-    def handle_math(self, command):
-        try:
-            expr = command.lower().strip()
-            print(f"Processing math command: {expr}")
-
-            if "square root" in expr or "root" in expr:
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if numbers:
-                    number = float(numbers[0])
-                    result = math.sqrt(number)
-                    return f"The square root of {number} is {result:.4f}"
-
-            if "cube root" in expr:
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if numbers:
-                    number = float(numbers[0])
-                    result = number ** (1/3)
-                    return f"The cube root of {number} is {result:.4f}"
-
-            if "factorial" in expr:
-                numbers = re.findall(r'\d+', expr)
-                if numbers:
-                    number = int(numbers[0])
-                    if number < 0:
-                        return "Factorial is not defined for negative numbers"
-                    if number > 20:
-                        return f"Factorial of {number} is too large to calculate"
-                    result = math.factorial(number)
-                    return f"The factorial of {number} is {result}"
-
-            if any(word in expr for word in ["power", "raised to", "to the power"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    base = float(numbers[0])
-                    exponent = float(numbers[1])
-                    result = base ** exponent
-                    return f"{base} to the power of {exponent} is {result}"
-
-            if any(word in expr for word in ["plus", "add", "addition"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 + num2
-                    return f"{num1} plus {num2} equals {result}"
-
-            if any(word in expr for word in ["minus", "subtract", "subtraction"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 - num2
-                    return f"{num1} minus {num2} equals {result}"
-
-            if any(word in expr for word in ["times", "multiply", "multiplication"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 * num2
-                    return f"{num1} times {num2} equals {result}"
-
-            if any(word in expr for word in ["divided by", "divide", "division"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    if num2 == 0:
-                        return "Cannot divide by zero"
-                    result = num1 / num2
-                    return f"{num1} divided by {num2} equals {result:.4f}"
-
-            if any(word in expr for word in ["modulo", "mod", "remainder"]):
-                numbers = re.findall(r'\d+', expr)
-                if len(numbers) >= 2:
-                    num1 = int(numbers[0])
-                    num2 = int(numbers[1])
-                    if num2 == 0:
-                        return "Cannot divide by zero"
-                    result = num1 % num2
-                    return f"The remainder when {num1} is divided by {num2} is {result}"
-
-            if any(op in expr for op in ["+", "-", "*", "/", "**", "%"]):
-                clean_expr = re.sub(r'[^\d+\-*/.()%]', '', expr)
-                if clean_expr:
-                    try:
-                        result = eval(clean_expr)
-                        if isinstance(result, (int, float)):
-                            if result == int(result):
-                                result = int(result)
-                            return f"The answer is {result}"
-                    except:
-                        pass
-
-            numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-            if numbers:
-                return f"I found the numbers: {', '.join(numbers)}. Please specify an operation like 'plus', 'minus', 'times', or 'divided by'."
-
-            return "I couldn't understand the math operation. Please try phrases like '5 plus 3' or '10 times 2'."
-
-        except Exception as e:
-            print(f"Math calculation error: {e}")
-            return f"Sorry, I couldn't calculate that. Error: {str(e)}"
-
+## Process Command Method
+```python
     def process_command(self, command):
         if not command:
             return True
@@ -266,72 +213,40 @@ class VoiceAssistant:
             self.speak(current_date)
             return True
 
-        math_indicators = ["plus", "minus", "times", "multiply", "divide", "divided by", "add", "subtract", 
-                          "addition", "subtraction", "multiplication", "division", "power", "raised to", 
-                          "square root", "root", "cube root", "factorial", "modulo", "mod", "remainder", "calculate", 
-                          "solve", "compute", "find", "result", "answer", "how much is", "equals"]
-        
-        has_math_operation = any(indicator in command for indicator in math_indicators)
-        has_math_operators = any(char in command for char in "+-*/%**")
-        has_numbers = re.search(r'\d+', command)
-        
-        if ((has_math_operation and has_numbers) or has_math_operators or (has_numbers and any(word in command for word in ["calculate", "solve", "compute", "result", "answer"]))):
-            result = self.handle_math(command)
-            if result:
-                self.speak(result)
-                return True
-
-        question_words = ["what", "who", "when", "where", "why", "how", "explain", "define", "tell me", "can you", "could you", "would you", "in detail", "more about", "information", "details", "explanation", "describe", "elaborate", "how to"]
-        
-        is_complex_question = any(word in command for word in question_words)
-        
-        if is_complex_question:
-            answer = self.ask_gemini(command)
-            
-            if answer:
-                self.speak(answer)
-            else:
-                self.speak("I'm having trouble getting a response right now. Please try again.")
-            return True
-        
         answer = self.ask_gemini(command)
         if answer:
             self.speak(answer)
         else:
-            fallback_responses = [
-                "I'm not sure how to help with that. Could you try rephrasing?",
-                "I didn't understand that. Can you ask me something else?",
-                "That's interesting! Could you be more specific?"
-            ]
-            self.speak(random.choice(fallback_responses))
+            self.speak("I'm having trouble getting a response right now. Please try again.")
         return True
+```
 
+## Basic Response Method
+```python
     def _get_basic_response(self, user_input):
         for key, responses in self.responses.items():
             if key in user_input:
                 return random.choice(responses)
-        
         return None
+```
 
+## Run Method
+```python
     def run(self):
         print("\n" + "="*60)
         print("DEEPSPHERE VOICE ASSISTANT STARTED")
         print("Connected to Gemini AI")
         print("Say 'quit', 'exit', or 'goodbye' to stop")
         print("Continuous listening mode enabled")
-        print("I can do math and answer any questions!")
+        print("I can answer your questions with Gemini AI!")
         print("="*60 + "\n")
-
         while True:
             try:
                 user_input = self.listen()
-
                 if user_input:
                     result = self.process_command(user_input)
-
                     if result == False:
                         break
-
             except KeyboardInterrupt:
                 print("\nShutting down...")
                 self.speak("Goodbye!")
@@ -339,7 +254,10 @@ class VoiceAssistant:
             except Exception as e:
                 print(f"Error: {e}")
                 self.speak("Sorry, something went wrong. Let's try again.")
+```
 
+## Main Function & Entry Point
+```python
 def main():
     try:
         assistant = VoiceAssistant()
@@ -348,6 +266,6 @@ def main():
         print(f"Failed to start: {e}")
         print("Check your libraries and API key.")
 
-
 if __name__ == "__main__":
     main()
+```

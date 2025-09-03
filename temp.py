@@ -1,7 +1,5 @@
 import datetime
-import math
 import random
-import re
 import pyttsx3
 import requests
 import speech_recognition as sr
@@ -137,110 +135,6 @@ class VoiceAssistant:
             print(f"Gemini API request failed: {e}")
             return None
 
-    def handle_math(self, command):
-        try:
-            expr = command.lower().strip()
-            print(f"Processing math command: {expr}")
-
-            if "square root" in expr or "root" in expr:
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if numbers:
-                    number = float(numbers[0])
-                    result = math.sqrt(number)
-                    return f"The square root of {number} is {result:.4f}"
-
-            if "cube root" in expr:
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if numbers:
-                    number = float(numbers[0])
-                    result = number ** (1/3)
-                    return f"The cube root of {number} is {result:.4f}"
-
-            if "factorial" in expr:
-                numbers = re.findall(r'\d+', expr)
-                if numbers:
-                    number = int(numbers[0])
-                    if number < 0:
-                        return "Factorial is not defined for negative numbers"
-                    if number > 20:
-                        return f"Factorial of {number} is too large to calculate"
-                    result = math.factorial(number)
-                    return f"The factorial of {number} is {result}"
-
-            if any(word in expr for word in ["power", "raised to", "to the power"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    base = float(numbers[0])
-                    exponent = float(numbers[1])
-                    result = base ** exponent
-                    return f"{base} to the power of {exponent} is {result}"
-
-            if any(word in expr for word in ["plus", "add", "addition"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 + num2
-                    return f"{num1} plus {num2} equals {result}"
-
-            if any(word in expr for word in ["minus", "subtract", "subtraction"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 - num2
-                    return f"{num1} minus {num2} equals {result}"
-
-            if any(word in expr for word in ["times", "multiply", "multiplication"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    result = num1 * num2
-                    return f"{num1} times {num2} equals {result}"
-
-            if any(word in expr for word in ["divided by", "divide", "division"]):
-                numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-                if len(numbers) >= 2:
-                    num1 = float(numbers[0])
-                    num2 = float(numbers[1])
-                    if num2 == 0:
-                        return "Cannot divide by zero"
-                    result = num1 / num2
-                    return f"{num1} divided by {num2} equals {result:.4f}"
-
-            if any(word in expr for word in ["modulo", "mod", "remainder"]):
-                numbers = re.findall(r'\d+', expr)
-                if len(numbers) >= 2:
-                    num1 = int(numbers[0])
-                    num2 = int(numbers[1])
-                    if num2 == 0:
-                        return "Cannot divide by zero"
-                    result = num1 % num2
-                    return f"The remainder when {num1} is divided by {num2} is {result}"
-
-            if any(op in expr for op in ["+", "-", "*", "/", "**", "%"]):
-                clean_expr = re.sub(r'[^\d+\-*/.()%]', '', expr)
-                if clean_expr:
-                    try:
-                        result = eval(clean_expr)
-                        if isinstance(result, (int, float)):
-                            if result == int(result):
-                                result = int(result)
-                            return f"The answer is {result}"
-                    except:
-                        pass
-
-            numbers = re.findall(r'\d+(?:\.\d+)?', expr)
-            if numbers:
-                return f"I found the numbers: {', '.join(numbers)}. Please specify an operation like 'plus', 'minus', 'times', or 'divided by'."
-
-            return "I couldn't understand the math operation. Please try phrases like '5 plus 3' or '10 times 2'."
-
-        except Exception as e:
-            print(f"Math calculation error: {e}")
-            return f"Sorry, I couldn't calculate that. Error: {str(e)}"
-
     def process_command(self, command):
         if not command:
             return True
@@ -266,44 +160,11 @@ class VoiceAssistant:
             self.speak(current_date)
             return True
 
-        math_indicators = ["plus", "minus", "times", "multiply", "divide", "divided by", "add", "subtract", 
-                          "addition", "subtraction", "multiplication", "division", "power", "raised to", 
-                          "square root", "root", "cube root", "factorial", "modulo", "mod", "remainder", "calculate", 
-                          "solve", "compute", "find", "result", "answer", "how much is", "equals"]
-        
-        has_math_operation = any(indicator in command for indicator in math_indicators)
-        has_math_operators = any(char in command for char in "+-*/%**")
-        has_numbers = re.search(r'\d+', command)
-        
-        if ((has_math_operation and has_numbers) or has_math_operators or (has_numbers and any(word in command for word in ["calculate", "solve", "compute", "result", "answer"]))):
-            result = self.handle_math(command)
-            if result:
-                self.speak(result)
-                return True
-
-        question_words = ["what", "who", "when", "where", "why", "how", "explain", "define", "tell me", "can you", "could you", "would you", "in detail", "more about", "information", "details", "explanation", "describe", "elaborate", "how to"]
-        
-        is_complex_question = any(word in command for word in question_words)
-        
-        if is_complex_question:
-            answer = self.ask_gemini(command)
-            
-            if answer:
-                self.speak(answer)
-            else:
-                self.speak("I'm having trouble getting a response right now. Please try again.")
-            return True
-        
         answer = self.ask_gemini(command)
         if answer:
             self.speak(answer)
         else:
-            fallback_responses = [
-                "I'm not sure how to help with that. Could you try rephrasing?",
-                "I didn't understand that. Can you ask me something else?",
-                "That's interesting! Could you be more specific?"
-            ]
-            self.speak(random.choice(fallback_responses))
+            self.speak("I'm having trouble getting a response right now. Please try again.")
         return True
 
     def _get_basic_response(self, user_input):
@@ -319,7 +180,7 @@ class VoiceAssistant:
         print("Connected to Gemini AI")
         print("Say 'quit', 'exit', or 'goodbye' to stop")
         print("Continuous listening mode enabled")
-        print("I can do math and answer any questions!")
+        print("I can answer your questions with Gemini AI!")
         print("="*60 + "\n")
 
         while True:
