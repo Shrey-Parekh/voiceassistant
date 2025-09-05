@@ -3,6 +3,7 @@ import random
 import pyttsx3
 import requests
 import speech_recognition as sr
+import time
 
 
 class VoiceAssistant:
@@ -15,7 +16,7 @@ class VoiceAssistant:
     def _setup_core_components(self):
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
-        self.tts_engine = pyttsx3.init()
+        self.tts_engine = None
         self.assistant_name = "DeepSphere"
         self._configure_voice()
 
@@ -38,14 +39,24 @@ class VoiceAssistant:
         self._test_gemini_connection()
 
     def _configure_voice(self):
-        voices = self.tts_engine.getProperty('voices')
-        print(f"Found {len(voices)} voices available")
-        
-        if voices:
-            print(f"Using default voice: {voices[0].name}")
-        
-        self.tts_engine.setProperty('rate', 150)
-        self.tts_engine.setProperty('volume', 1.0)
+        try:
+            self.tts_engine = pyttsx3.init()
+            
+            voices = self.tts_engine.getProperty('voices')
+            print(f"Found {len(voices)} voices available")
+            
+            if voices:
+                print(f"Using default voice: {voices[0].name}")
+            
+            self.tts_engine.setProperty('rate', 150)
+            self.tts_engine.setProperty('volume', 1.0)
+            
+            print("Text-to-speech engine configured successfully!")
+            
+        except Exception as e:
+            print(f"Warning: TTS initialization failed: {e}")
+            print("Speech output will not be available")
+            self.tts_engine = None
 
     def _test_gemini_connection(self):
         print("Testing Gemini API connection...")
@@ -56,8 +67,28 @@ class VoiceAssistant:
 
     def speak(self, text):
         print(f"Assistant: {text}")
-        self.tts_engine.say(text)
-        self.tts_engine.runAndWait()
+        
+        if self.tts_engine is None:
+            print("[TTS not available - text only]")
+            return
+            
+        try:
+            self.tts_engine.say(text)
+            self.tts_engine.runAndWait()
+            time.sleep(0.1)
+        except Exception as e:
+            print(f"TTS Error: {e}")
+            try:
+                self.tts_engine.stop()
+                time.sleep(0.5)
+                self.tts_engine = pyttsx3.init()
+                self.tts_engine.setProperty('rate', 150)
+                self.tts_engine.setProperty('volume', 1.0)
+                self.tts_engine.say(text)
+                self.tts_engine.runAndWait()
+            except Exception as e2:
+                print(f"TTS Recovery failed: {e2}")
+                print("[Speaking text only in console]")
 
     def listen(self):
         timeout = 30
@@ -160,11 +191,15 @@ class VoiceAssistant:
             self.speak(current_date)
             return True
 
+        print("Sending query to Gemini AI...")
         answer = self.ask_gemini(command)
         if answer:
+            print("Speaking Gemini response...")
             self.speak(answer)
         else:
-            self.speak("I'm having trouble getting a response right now. Please try again.")
+            error_msg = "I'm having trouble getting a response right now. Please try again."
+            print("Speaking error message...")
+            self.speak(error_msg)
         return True
 
     def _get_basic_response(self, user_input):
@@ -181,6 +216,8 @@ class VoiceAssistant:
         print("Say 'quit', 'exit', or 'goodbye' to stop")
         print("Continuous listening mode enabled")
         print("I can answer your questions with Gemini AI!")
+        if self.tts_engine is None:
+            print("WARNING: Text-to-speech not available - text only mode")
         print("="*60 + "\n")
 
         while True:
